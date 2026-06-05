@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>分享报告 — SkillGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="p-8 max-w-3xl mx-auto">
+  <p class="label-cat">SHARED REPORT</p>
+  <h1 class="text-xl font-bold mt-2 mb-6">分享的安全报告</h1>
+  <div id="content" class="card p-6">加载中…</div>
+  <script src="/static/js/app.js"></script>
+  <script>
+    const token = location.pathname.split('/').pop();
+    SkillGuard.api('/share/' + token)
+      .then(scan => {
+        document.getElementById('content').innerHTML = `
+          <p class="font-semibold">${scan.filename}</p>
+          <p class="mt-2"><span class="badge ${SkillGuard.riskBadgeClass(scan.risk_level)}">${scan.risk_label}</span>
+          <span class="font-mono ml-2">${scan.risk_score}/100</span></p>
+          <p class="text-sm text-slate-500 mt-4">${scan.summary_line || ''}</p>
+          <a class="btn-primary inline-block mt-6 no-underline" href="/api/scans/${scan.id}/report" target="_blank">打开完整 HTML 报告</a>`;
+      })
+      .catch(e => { document.getElementById('content').textContent = e.message; });
+  </script>
+</body>
+</html>

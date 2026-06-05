@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills 安全评估报告 — SkillGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body class="bg-[#F8FAFC]">
+  <nav class="border-b border-[#E2E8F0] bg-white sticky top-0 z-10">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+      <a href="/" class="nav-link text-sm">← 返回上传</a>
+      <div class="flex gap-3 items-center">
+        <a href="/history" class="text-sm text-slate-500 hover:text-slate-800 no-underline">扫描历史</a>
+        <a id="dlBtn" href="#" class="btn-primary text-sm no-underline">下载 HTML 报告</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-6xl mx-auto px-4 py-6" id="reportRoot">
+    <p class="text-slate-500 text-center py-12">加载报告中…</p>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    const scanId = location.pathname.split('/').filter(Boolean).pop();
+
+    async function load() {
+      const scan = await SkillGuard.api('/scans/' + scanId);
+      if (scan.status !== 'completed') {
+        document.getElementById('reportRoot').innerHTML =
+          '<p class="text-amber-600 text-center py-12">扫描尚未完成（' + (scan.progress_message || scan.status) + '）</p>';
+        return;
+      }
+
+      document.getElementById('dlBtn').href = '/api/scans/' + scanId + '/report?download=1';
+      document.title = 'Skills 安全评估报告 — ' + (scan.filename || 'SkillGuard');
+
+      const health = Math.max(0, Math.min(100, 100 - (scan.risk_score || 0)));
+      const root = document.getElementById('reportRoot');
+      root.innerHTML = `
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 px-2">
+          <div>
+            <h1 class="text-lg font-bold text-slate-800">${scan.filename || 'Skill 包'}</h1>
+            <p class="text-sm text-slate-500 mt-1">
+              安全健康度 <span class="font-mono font-semibold text-[#16A34A]">${health}</span>/100
+              · ${scan.risk_label || ''}
+              · ${SkillGuard.formatDate(scan.completed_at || scan.created_at)}
+            </p>
+          </div>
+        </div>
+        <iframe
+          id="reportFrame"
+          class="w-full rounded-2xl border border-[#E2E8F0] bg-white shadow-sm"
+          style="min-height: calc(100vh - 140px);"
+          title="Skills 安全评估报告"
+        ></iframe>`;
+
+      document.getElementById('reportFrame').src = '/api/scans/' + scanId + '/report';
+    }
+
+    load().catch(e => {
+      document.getElementById('reportRoot').innerHTML =
+        '<p class="text-red-500 text-center py-12">' + e.message + '</p>';
+    });
+  </script>
+</body>
+</html>

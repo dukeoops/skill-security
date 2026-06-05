@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SkillGuard — AI Skills 安全评估</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: { primary: '#2563EB', slate: { 500: '#64748B' } },
+          fontFamily: { sans: ['Plus Jakarta Sans', 'system-ui'], mono: ['JetBrains Mono', 'monospace'] },
+        },
+      },
+    };
+  </script>
+</head>
+<body>
+  <nav class="border-b border-[#E2E8F0] bg-white">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-sm">SG</div>
+        <div>
+          <p class="text-lg font-bold text-slate-900">SkillGuard</p>
+          <p class="label-cat">AI Skills Security</p>
+        </div>
+      </div>
+      <div class="flex gap-6">
+        <a href="/" class="nav-link active">上传扫描</a>
+        <a href="/history" class="nav-link">历史记录</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <header class="mb-8">
+      <p class="label-cat mb-2">SKILL SECURITY SCAN</p>
+      <h1 class="text-xl font-bold text-slate-900">上传 Skill 压缩包</h1>
+      <p class="text-sm text-slate-500 mt-2 font-medium">支持 .zip / .tar / .tar.gz / .tgz，最大 200MB · ClamAV + 静态规则 + LLM 审计</p>
+    </header>
+
+    <div id="uploadSection" class="card p-8">
+      <div id="dropzone" class="dropzone p-12 text-center cursor-pointer">
+        <input type="file" id="fileInput" class="hidden" accept=".zip,.tar,.tar.gz,.tgz" />
+        <div class="text-4xl mb-4 opacity-40">📦</div>
+        <p class="text-base font-semibold text-slate-800">拖拽文件到此处，或点击选择</p>
+        <p class="text-sm text-slate-500 mt-2">单包扫描 · 约 60 秒内完成</p>
+      </div>
+      <div id="selectedFile" class="hidden mt-6 p-4 rounded-xl border border-[#E2E8F0] flex items-center justify-between">
+        <div>
+          <p class="font-semibold text-sm" id="fileName">—</p>
+          <p class="text-xs text-slate-500 font-mono mt-1" id="fileSize">—</p>
+        </div>
+        <button id="startScan" class="btn-primary">开始扫描</button>
+      </div>
+    </div>
+
+    <div id="progressSection" class="card p-8 mt-6 hidden">
+      <p class="label-cat mb-2">SCANNING</p>
+      <h2 class="text-base font-bold mb-4" id="progressTitle">扫描进行中…</h2>
+      <div class="progress-bar mb-3">
+        <div class="progress-fill" id="progressFill" style="width:0%"></div>
+      </div>
+      <p class="text-sm text-slate-500" id="progressMsg">等待中</p>
+    </div>
+
+    <div id="resultSection" class="card p-8 mt-6 hidden">
+      <p class="label-cat mb-2">RESULT</p>
+      <div class="flex flex-wrap items-center gap-4 mb-6">
+        <span id="resultRisk" class="text-2xl font-bold font-mono risk-safe">安全</span>
+        <span id="resultScore" class="font-mono text-slate-500">0/100</span>
+        <span id="resultBadge" class="badge badge-safe">SAFE</span>
+      </div>
+      <p class="text-sm font-medium text-slate-600 mb-6" id="resultSummary"></p>
+      <div class="flex flex-wrap gap-3">
+        <a id="viewReport" href="#" class="btn-primary inline-block text-center no-underline">在线查看报告</a>
+        <a id="downloadReport" href="#" class="btn-outline inline-block text-center no-underline">下载 HTML</a>
+        <button id="shareBtn" class="btn-outline">生成分享链接</button>
+      </div>
+      <p id="shareUrl" class="hidden mt-4 text-xs font-mono text-slate-500 break-all"></p>
+    </div>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    const dropzone = document.getElementById('dropzone');
+    const fileInput = document.getElementById('fileInput');
+    const selectedFile = document.getElementById('selectedFile');
+    let currentFile = null;
+
+    dropzone.addEventListener('click', () => fileInput.click());
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('dragover'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('dragover'));
+    dropzone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+      if (e.dataTransfer.files[0]) setFile(e.dataTransfer.files[0]);
+    });
+    fileInput.addEventListener('change', () => { if (fileInput.files[0]) setFile(fileInput.files[0]); });
+
+    function setFile(file) {
+      currentFile = file;
+      document.getElementById('fileName').textContent = file.name;
+      document.getElementById('fileSize').textContent = SkillGuard.formatSize(file.size);
+      selectedFile.classList.remove('hidden');
+    }
+
+    document.getElementById('startScan').addEventListener('click', async () => {
+      if (!currentFile) return;
+      const fd = new FormData();
+      fd.append('file', currentFile);
+      document.getElementById('uploadSection').classList.add('opacity-60', 'pointer-events-none');
+      document.getElementById('progressSection').classList.remove('hidden');
+      document.getElementById('resultSection').classList.add('hidden');
+
+      try {
+        const res = await fetch('/api/scans', { method: 'POST', body: fd });
+        const scan = await res.json();
+        if (!res.ok) throw new Error(scan.error || '上传失败');
+
+        SkillGuard.pollProgress(scan.id, p => {
+          document.getElementById('progressFill').style.width = (p.progress || 0) + '%';
+          document.getElementById('progressMsg').textContent = p.progress_message || '扫描中…';
+        }, async () => {
+          const full = await SkillGuard.api('/scans/' + scan.id);
+          showResult(full);
+        });
+      } catch (e) {
+        document.getElementById('progressMsg').textContent = e.message;
+        document.getElementById('uploadSection').classList.remove('opacity-60', 'pointer-events-none');
+      }
+    });
+
+    function showResult(scan) {
+      document.getElementById('progressSection').classList.add('hidden');
+      document.getElementById('resultSection').classList.remove('hidden');
+      document.getElementById('uploadSection').classList.remove('opacity-60', 'pointer-events-none');
+      document.getElementById('resultRisk').textContent = scan.risk_label || scan.risk_level;
+      document.getElementById('resultRisk').className = 'text-2xl font-bold font-mono risk-' + scan.risk_level;
+      document.getElementById('resultScore').textContent = scan.risk_score + '/100';
+      const badge = document.getElementById('resultBadge');
+      badge.textContent = (scan.risk_level || 'safe').toUpperCase();
+      badge.className = 'badge ' + SkillGuard.riskBadgeClass(scan.risk_level);
+      document.getElementById('resultSummary').textContent = scan.summary_line || '扫描完成';
+      document.getElementById('viewReport').href = '/report/' + scan.id;
+      document.getElementById('downloadReport').href = '/api/scans/' + scan.id + '/report?download=1';
+
+      document.getElementById('shareBtn').onclick = async () => {
+        const share = await SkillGuard.api('/scans/' + scan.id + '/share', { method: 'POST' });
+        const url = location.origin + share.share_url;
+        document.getElementById('shareUrl').textContent = '分享链接（' + share.expires_at + ' 过期）: ' + url;
+        document.getElementById('shareUrl').classList.remove('hidden');
+      };
+    }
+  </script>
+</body>
+</html>

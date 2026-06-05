@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>扫描历史 — SkillGuard</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/style.css" />
+</head>
+<body>
+  <nav class="border-b border-[#E2E8F0] bg-white">
+    <div class="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-xl bg-[#2563EB] flex items-center justify-center text-white font-bold text-sm">SG</div>
+        <p class="text-lg font-bold">SkillGuard</p>
+      </div>
+      <div class="flex gap-6">
+        <a href="/" class="nav-link">上传扫描</a>
+        <a href="/history" class="nav-link active">历史记录</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="max-w-5xl mx-auto px-6 py-10">
+    <header class="mb-8">
+      <p class="label-cat mb-2">HISTORY</p>
+      <h1 class="text-xl font-bold">扫描历史记录</h1>
+    </header>
+
+    <div class="card overflow-hidden">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 border-b border-[#E2E8F0]">
+          <tr>
+            <th class="text-left p-4 label-cat">文件</th>
+            <th class="text-left p-4 label-cat">风险</th>
+            <th class="text-left p-4 label-cat">状态</th>
+            <th class="text-left p-4 label-cat">时间</th>
+            <th class="text-right p-4 label-cat">操作</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+      <p id="emptyMsg" class="hidden p-8 text-center text-slate-500">暂无扫描记录</p>
+    </div>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    async function load() {
+      const data = await SkillGuard.api('/scans?per_page=50');
+      const tbody = document.getElementById('historyBody');
+      if (!data.items.length) {
+        document.getElementById('emptyMsg').classList.remove('hidden');
+        return;
+      }
+      data.items.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-[#E2E8F0] hover:bg-slate-50 transition-colors';
+        tr.innerHTML = `
+          <td class="p-4">
+            <p class="font-semibold">${s.filename}</p>
+            <p class="font-mono text-xs text-slate-500 mt-1">${(s.sha256 || '').slice(0, 16)}…</p>
+          </td>
+          <td class="p-4">
+            <span class="badge ${SkillGuard.riskBadgeClass(s.risk_level)}">${s.risk_label || s.risk_level}</span>
+            <span class="font-mono text-xs text-slate-500 ml-2">${s.risk_score}/100</span>
+          </td>
+          <td class="p-4 text-slate-600">${s.status}</td>
+          <td class="p-4 text-slate-500 text-xs">${SkillGuard.formatDate(s.created_at)}</td>
+          <td class="p-4 text-right">
+            ${s.status === 'completed' ? `<a href="/report/${s.id}" class="text-[#2563EB] font-medium hover:underline">报告</a>` : '—'}
+          </td>`;
+        tbody.appendChild(tr);
+      });
+    }
+    load().catch(e => alert(e.message));
+  </script>
+</body>
+</html>

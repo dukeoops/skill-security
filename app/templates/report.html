@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Skills 安全评估报告 — {{ skill.name }}</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --green: #22C55E;
+      --green-dark: #16A34A;
+      --green-light: #DCFCE7;
+      --green-bg: #F0FDF4;
+      --slate-500: #64748B;
+      --slate-700: #334155;
+      --bg: #F8FAFC;
+      --card: #FFFFFF;
+      --border: #E2E8F0;
+      --warning: #F59E0B;
+      --warning-bg: #FFFBEB;
+      --danger: #EF4444;
+      --danger-bg: #FEF2F2;
+      --shadow: 0 4px 24px -4px rgba(15, 23, 42, 0.08);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Noto Sans SC', 'Plus Jakarta Sans', system-ui, sans-serif;
+      background: var(--bg);
+      color: #0F172A;
+      line-height: 1.65;
+      font-size: 14px;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 24px 20px 56px; }
+
+    /* Header */
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0 28px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, var(--green-dark), var(--green));
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+    }
+    .brand h1 { font-size: 20px; font-weight: 700; }
+    .brand p { font-size: 12px; color: var(--slate-500); margin-top: 2px; }
+    .lab-logo {
+      text-align: right;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-700);
+      line-height: 1.4;
+    }
+    .lab-logo span { display: block; color: var(--slate-500); font-weight: 400; font-size: 11px; }
+
+    .section { margin-bottom: 24px; }
+    .section-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Overview */
+    .overview-grid {
+      display: grid;
+      grid-template-columns: 220px 1fr 1.2fr;
+      gap: 20px;
+      align-items: stretch;
+    }
+    @media (max-width: 900px) {
+      .overview-grid { grid-template-columns: 1fr; }
+    }
+    .score-ring-wrap {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: var(--shadow);
+    }
+    .score-ring { position: relative; width: 160px; height: 160px; }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-center {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .score-num {
+      font-size: 42px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      line-height: 1;
+    }
+    .score-num.good { color: var(--green-dark); }
+    .score-num.warn { color: var(--warning); }
+    .score-num.bad { color: var(--danger); }
+    .score-label { font-size: 12px; color: var(--slate-500); margin-top: 4px; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+    .stat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px 16px;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .stat-card .num {
+      font-size: 28px;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .stat-card .lbl { font-size: 12px; color: var(--slate-500); margin-top: 6px; }
+
+    .skill-info {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 22px 24px;
+      box-shadow: var(--shadow);
+    }
+    .skill-info h3 { font-size: 15px; font-weight: 600; margin-bottom: 14px; }
+    .skill-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      border-bottom: 1px solid #F1F5F9;
+      font-size: 13px;
+    }
+    .skill-row:last-child { border-bottom: none; }
+    .skill-row .k { color: var(--slate-500); flex-shrink: 0; }
+    .trust-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      background: var(--green-light);
+      color: var(--green-dark);
+    }
+    .trust-badge.warn { background: var(--warning-bg); color: #B45309; }
+    .trust-badge.bad { background: var(--danger-bg); color: #B91C1C; }
+    .hash-row { display: flex; align-items: center; gap: 8px; }
+    .copy-btn {
+      font-size: 11px;
+      padding: 2px 8px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #fff;
+      cursor: pointer;
+      color: var(--slate-500);
+    }
+    .copy-btn:hover { border-color: var(--green); color: var(--green-dark); }
+
+    /* Summary banner */
+    .summary-banner {
+      background: var(--green-bg);
+      border: 1px solid #BBF7D0;
+      border-radius: 14px;
+      padding: 20px 24px;
+      display: flex;
+      gap: 16px;
+      align-items: flex-start;
+    }
+    .summary-banner.warn { background: var(--warning-bg); border-color: #FDE68A; }
+    .summary-banner.bad { background: var(--danger-bg); border-color: #FECACA; }
+    .summary-banner .shield { flex-shrink: 0; color: var(--green-dark); }
+    .summary-banner.warn .shield { color: #B45309; }
+    .summary-banner.bad .shield { color: #B91C1C; }
+    .summary-banner p { font-size: 14px; color: var(--slate-700); }
+
+    /* Threat grid */
+    .threat-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) { .threat-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .threat-grid { grid-template-columns: 1fr; } }
+    .threat-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 16px 14px;
+      text-align: center;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      cursor: default;
+    }
+    .threat-card:hover { border-color: #86EFAC; box-shadow: var(--shadow); }
+    .threat-icon {
+      width: 40px; height: 40px;
+      margin: 0 auto 10px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      background: #F1F5F9;
+      color: var(--slate-700);
+    }
+    .threat-card.status-safe .threat-icon { background: var(--green-light); color: var(--green-dark); }
+    .threat-card.status-suspicious .threat-icon { background: var(--warning-bg); color: #B45309; }
+    .threat-card.status-malicious .threat-icon { background: var(--danger-bg); color: #B91C1C; }
+    .threat-name { font-size: 12px; font-weight: 600; margin-bottom: 8px; line-height: 1.35; min-height: 2.7em; }
+    .status-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+    .status-pill.safe { background: var(--green-light); color: var(--green-dark); }
+    .status-pill.suspicious { background: #FEF3C7; color: #B45309; }
+    .status-pill.malicious { background: #FEE2E2; color: #B91C1C; }
+
+    /* Tabs + Accordion */
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .tab {
+      padding: 8px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--card);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .tab:hover { border-color: var(--green); }
+    .tab.active {
+      background: var(--green);
+      border-color: var(--green);
+      color: #fff;
+      font-weight: 600;
+    }
+    .accordion-item {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      margin-bottom: 10px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .accordion-item.hidden { display: none; }
+    .acc-head {
+      padding: 16px 20px;
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      user-select: none;
+    }
+    .acc-head:hover { background: #FAFAFA; }
+    .acc-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 6px;
+    }
+    .tag.behavior-safe { background: var(--green-light); color: var(--green-dark); }
+    .tag.behavior-suspicious { background: #FEF3C7; color: #B45309; }
+    .tag.behavior-malicious { background: #FEE2E2; color: #B91C1C; }
+    .tag.engine { background: #EFF6FF; color: #1D4ED8; }
+    .acc-title { font-weight: 600; font-size: 14px; flex: 1; min-width: 140px; }
+    .acc-chevron { color: var(--slate-500); transition: transform 0.2s; }
+    .accordion-item.open .acc-chevron { transform: rotate(180deg); }
+    .acc-body { display: none; padding: 0 20px 18px; }
+    .accordion-item.open .acc-body { display: block; }
+    .log-toggle {
+      width: 100%;
+      text-align: left;
+      padding: 10px 14px;
+      background: #0F172A;
+      color: #94A3B8;
+      border: none;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      margin: 8px 0 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .log-toggle:hover { background: #1E293B; }
+    .log-panel {
+      display: none;
+      background: #0F172A;
+      color: #E2E8F0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 14px 16px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 280px;
+      overflow: auto;
+      margin-bottom: 12px;
+    }
+    .log-panel.show { display: block; }
+    .conclusion { font-size: 13px; color: var(--green-dark); font-weight: 500; }
+    .conclusion.warn { color: #B45309; }
+    .conclusion.bad { color: #B91C1C; }
+
+    /* Appendix */
+    .appendix {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-top: 8px;
+    }
+    .appendix h3 { font-size: 14px; margin-bottom: 12px; }
+    .meta-row { font-size: 12px; color: var(--slate-500); margin-bottom: 6px; }
+    .engine-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .engine-chip {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 12px;
+    }
+    .llm-raw-block {
+      margin-top: 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      background: #F8FAFC;
+    }
+    .llm-raw-block h4 {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--slate-700);
+    }
+    .llm-raw-entry {
+      margin-bottom: 12px;
+    }
+    .llm-raw-entry:last-child { margin-bottom: 0; }
+    .llm-raw-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--slate-700);
+      margin-bottom: 6px;
+    }
+    .llm-raw-panel {
+      background: #0F172A;
+      color: #E2E8F0;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      padding: 12px 14px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 360px;
+      overflow: auto;
+      margin: 0;
+    }
+    .llm-raw-note {
+      font-size: 11px;
+      color: var(--slate-500);
+      margin-bottom: 6px;
+    }
+    .llm-error-block {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: var(--danger-bg);
+      border: 1px solid #FECACA;
+      font-size: 12px;
+    }
+    .llm-error-block h4 {
+      font-size: 13px;
+      font-weight: 600;
+      color: #B91C1C;
+      margin-bottom: 8px;
+    }
+    .llm-error-item {
+      margin-bottom: 8px;
+      color: #7F1D1D;
+      line-height: 1.6;
+    }
+    .llm-error-item:last-child { margin-bottom: 0; }
+    .engine-chip.status-error strong { color: #B91C1C; }
+    .engine-chip.status-partial strong { color: #B45309; }
+    .llm-raw-entry.failed .llm-raw-label { color: #B91C1C; }
+    .footer-note { font-size: 12px; color: var(--slate-500); margin-top: 16px; line-height: 1.8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top-bar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/>
+          </svg>
+        </div>
+        <div>
+          <h1>Skills 安全评估报告</h1>
+          <p>Security Assessment Report · SkillGuard</p>
+        </div>
+      </div>
+      <div class="lab-logo">
+        SMOORE 安全实验室
+        <span>SMOORE Security Lab</span>
+      </div>
+    </header>
+
+    <!-- Section 1: Overview -->
+    <section class="section">
+      <h2 class="section-title">安全健康度总览</h2>
+      <div class="overview-grid">
+        <div class="score-ring-wrap">
+          <p style="font-size:12px;color:var(--slate-500);margin-bottom:12px;">安全健康度</p>
+          <div class="score-ring">
+            {% set ring_color = '#22C55E' if health_tone == 'good' else ('#F59E0B' if health_tone == 'warn' else '#EF4444') %}
+            <svg width="160" height="160" viewBox="0 0 160 160">
+              <circle cx="80" cy="80" r="70" fill="none" stroke="#E2E8F0" stroke-width="12"/>
+              <circle cx="80" cy="80" r="70" fill="none" stroke="{{ ring_color }}" stroke-width="12"
+                stroke-dasharray="{{ ring_circumference }}" stroke-dashoffset="{{ ring_offset }}"
+                stroke-linecap="round"/>
+            </svg>
+            <div class="score-center">
+              <span class="score-num {{ health_tone }}">{{ health_score }}</span>
+              <span class="score-label">/ 100</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="num">{{ stats.total }}</div>
+            <div class="lbl">发现问题总数</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--danger)">{{ stats.malicious }}</div>
+            <div class="lbl">检出恶意行为</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--warning)">{{ stats.suspicious }}</div>
+            <div class="lbl">检出可疑行为</div>
+          </div>
+          <div class="stat-card">
+            <div class="num" style="color:var(--green-dark)">{{ stats.engines }}</div>
+            <div class="lbl">引擎覆盖类别</div>
+          </div>
+        </div>
+
+        <div class="skill-info">
+          <h3>Skill 基本信息</h3>
+          <div class="skill-row">
+            <span class="k">名称 / 版本</span>
+            <span><strong>{{ skill.name }}</strong> {{ skill.version }}</span>
+          </div>
+          <div class="skill-row">
+            <span class="k">原始包</span>
+            <span class="mono" style="font-size:12px;">{{ skill.filename }}</span>
+          </div>
+          <div class="skill-row">
+            <span class="k">内容 Hash</span>
+            <span class="hash-row">
+              <span class="mono" style="font-size:11px;" id="hashDisplay" title="{{ skill.hash }}">{{ skill.hash_short }}</span>
+              {% if skill.hash %}
+              <button type="button" class="copy-btn" data-copy="{{ skill.hash }}">复制</button>
+              {% endif %}
+            </span>
+          </div>
+          <div class="skill-row">
+            <span class="k">总体评估</span>
+            <span class="trust-badge {% if trust_label == '需关注' %}warn{% elif trust_label == '不可信' %}bad{% endif %}">
+              {{ trust_label }}
+            </span>
+          </div>
+          <div class="skill-row">
+            <span class="k">扫描时间</span>
+            <span>{{ scan_time.strftime('%Y-%m-%d %H:%M:%S') }} UTC · {{ scan.scan_duration_ms or 0 }} ms</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2: Overall summary -->
+    <section class="section">
+      <h2 class="section-title">总体风险摘要</h2>
+      <div class="summary-banner {% if health_tone == 'warn' %}warn{% elif health_tone == 'bad' %}bad{% endif %}">
+        <div class="shield" aria-hidden="true">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4zm-1 14.5l-3.5-3.5 1.4-1.4 2.1 2.1 4.8-4.8 1.4 1.4-6.2 6.2z"/>
+          </svg>
+        </div>
+        <p>{{ overall_conclusion }}</p>
+      </div>
+    </section>
+
+    <!-- Section 3: Threat model grid -->
+    <section class="section">
+      <h2 class="section-title">威胁捕获模型视图</h2>
+      <div class="threat-grid">
+        {% for cat in risk_categories %}
+        <div class="threat-card status-{{ cat.status }}" data-cat-id="{{ cat.id }}">
+          <div class="threat-icon" aria-hidden="true">
+            {% if cat.icon == 'supply' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16v-4H8v4M12 3v4m-4 5l4-4 4 4"/></svg>
+            {% elif cat.icon == 'terminal' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+            {% elif cat.icon == 'globe' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/></svg>
+            {% elif cat.icon == 'folder' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg>
+            {% elif cat.icon == 'prompt' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+            {% elif cat.icon == 'download' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            {% elif cat.icon == 'code' %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+            {% else %}
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L4 6v6c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10V6l-8-4z"/></svg>
+            {% endif %}
+          </div>
+          <div class="threat-name">{{ cat.name }}</div>
+          <span class="status-pill {{ cat.status }}">
+            {% if cat.status == 'safe' %}✅ 安全{% elif cat.status == 'suspicious' %}⚡ 可疑{% else %}⚠️ 风险{% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Section 4: Detailed analysis -->
+    <section class="section">
+      <h2 class="section-title">威胁行为图谱解析</h2>
+      <div class="tabs" role="tablist">
+        <button type="button" class="tab active" data-filter="all">全部引擎结果 ({{ tab_counts.all }})</button>
+        <button type="button" class="tab" data-filter="malicious">检出恶意 ({{ tab_counts.malicious }})</button>
+        <button type="button" class="tab" data-filter="suspicious">检出可疑 ({{ tab_counts.suspicious }})</button>
+        <button type="button" class="tab" data-filter="safe">评估安全 ({{ tab_counts.safe }})</button>
+      </div>
+
+      <div id="accordion">
+        {% for item in detailed_analysis %}
+        <div class="accordion-item" data-status="{{ item.status }}" id="acc-{{ item.id }}">
+          <div class="acc-head" onclick="toggleAccordion(this.parentElement)">
+            <div class="acc-tags">
+              <span class="tag behavior-{{ item.status }}">{{ item.behavior_label }}</span>
+              {% for eng in item.engines %}
+              <span class="tag engine">{{ eng }}</span>
+              {% endfor %}
+            </div>
+            <span class="acc-title">{{ item.name }}</span>
+            <span class="acc-chevron">▼</span>
+          </div>
+          <div class="acc-body">
+            <button type="button" class="log-toggle" onclick="toggleLog(this, event)">
+              <span>检测详情日志</span>
+              <span>展开 ▾</span>
+            </button>
+            <pre class="log-panel">{{ item.log_text }}</pre>
+            <p class="conclusion {% if item.status == 'suspicious' %}warn{% elif item.status == 'malicious' %}bad{% endif %}">
+              {{ item.conclusion }}
+            </p>
+            {% if item.findings %}
+            <div style="margin-top:14px;">
+              {% for f in item.findings %}
+              <div style="border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;font-size:13px;">
+                <strong>{{ f.title }}</strong>
+                <span class="mono" style="font-size:11px;color:var(--slate-500);margin-left:8px;">{{ f.location }}</span>
+                <p style="margin-top:6px;color:var(--slate-700);">{{ f.description }}</p>
+                {% if f.suggestion %}
+                <p style="margin-top:6px;font-size:12px;color:var(--slate-500);"><strong>建议：</strong>{{ f.suggestion }}</p>
+                {% endif %}
+              </div>
+              {% endfor %}
+            </div>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- Appendix -->
+    <section class="appendix">
+      <h3>扫描引擎与声明</h3>
+      <p class="meta-row">报告 ID #{{ scan.id }} · 风险等级 {{ risk_label }} ({{ scan.risk_score }}/100) · SHA256 完整值见上方</p>
+      <div class="engine-row">
+        {% for eng in engines %}
+        <div class="engine-chip{% if eng.engine == 'llm' and eng.status in ('error', 'partial') %} status-{{ eng.status }}{% endif %}">
+          <strong>{{ eng.engine|upper }}</strong>
+          <div>{{ eng.status }} — {{ eng.message }}</div>
+          <div class="mono" style="margin-top:4px;color:var(--slate-500);">{{ eng.duration_ms }} ms</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% for eng in engines %}
+      {% if eng.engine == 'llm' and eng.errors %}
+      <div class="llm-error-block">
+        <h4>LLM 审计 — 调用异常（不计入安全风险）</h4>
+        {% for err in eng.errors %}
+        <div class="llm-error-item mono">
+          {{ err.file }}{% if err.chunk_index is defined %} · 分片 {{ err.chunk_index + 1 }}{% endif %}<br />
+          {{ err.message }}
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% if eng.engine == 'llm' and eng.raw_responses %}
+      <div class="llm-raw-block">
+        <h4>LLM 审计 — 完整返回信息</h4>
+        {% for item in eng.raw_responses %}
+        <div class="llm-raw-entry{% if item.failed %} failed{% endif %}">
+          <div class="llm-raw-label mono">
+            {{ item.file }}{% if item.chunk_index is defined %} · 分片 {{ item.chunk_index + 1 }}{% endif %}
+            {% if item.failed %} · 调用失败{% endif %}
+          </div>
+          {% if item.note %}
+          <p class="llm-raw-note">{{ item.note }}</p>
+          {% endif %}
+          <pre class="llm-raw-panel">{{ item.raw }}</pre>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endfor %}
+      <div class="footer-note">
+        <p>本报告由 SkillGuard（AISkillScan）自动生成，结合 ClamAV、静态规则与 LLM 代码审计，仅供参考，不构成法律或安全担保。</p>
+        <p style="margin-top:8px;">建议在发布 Skill 前修复所有高危及以上问题；对 AI 审计结果应结合人工复核。</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    function toggleAccordion(el) {
+      el.classList.toggle('open');
+    }
+
+    function toggleLog(btn, ev) {
+      ev.stopPropagation();
+      const panel = btn.nextElementSibling;
+      const open = panel.classList.toggle('show');
+      btn.querySelector('span:last-child').textContent = open ? '收起 ▴' : '展开 ▾';
+    }
+
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        const filter = tab.dataset.filter;
+        document.querySelectorAll('.accordion-item').forEach(item => {
+          const st = item.dataset.status;
+          const show = filter === 'all' || st === filter;
+          item.classList.toggle('hidden', !show);
+        });
+      });
+    });
+
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.copy || '';
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '已复制';
+          setTimeout(() => { btn.textContent = '复制'; }, 1500);
+        });
+      });
+    });
+
+    document.querySelectorAll('.threat-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const id = card.dataset.catId;
+        const acc = document.getElementById('acc-' + id);
+        if (acc) {
+          acc.classList.add('open');
+          acc.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      });
+    });
+
+    // 默认展开第一个非安全项，或第一项
+    (function() {
+      const items = document.querySelectorAll('.accordion-item');
+      let opened = false;
+      items.forEach(item => {
+        if (!opened && item.dataset.status !== 'safe') {
+          item.classList.add('open');
+          opened = true;
+        }
+      });
+      if (!opened && items[0]) items[0].classList.add('open');
+    })();
+  </script>
+</body>
+</html>
