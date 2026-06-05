@@ -1,0 +1,36 @@
+# Flask
+FLASK_ENV=development
+SECRET_KEY=change-me-in-production
+
+# MySQL
+DATABASE_URL=mysql+pymysql://skillguard:skillguard@localhost:3306/skillguard?charset=utf8mb4
+
+# Paths
+TEMP_DIR=./data/temp
+REPORT_DIR=./data/reports
+UPLOAD_MAX_MB=200
+TEMP_CLEANUP_MINUTES=30
+
+# ClamAV REST API
+CLAMAV_API_URL=https://clamav.example.com/api/v1/scan
+CLAMAV_API_TOKEN=
+CLAMAV_ENABLED=true
+CLAMAV_MOCK=true
+
+# LLM (OpenAI-compatible)
+LLM_PROVIDER=openai
+LLM_API_KEY=sk-xxxxxx
+LLM_BASE_URL=http://127.0.0.1:11434/v1
+LLM_MODEL=qwen3:32b
+LLM_ENABLED=true
+LLM_MOCK=false
+LLM_TIMEOUT=120
+LLM_CHUNK_SIZE=8000
+
+# Static analysis
+SEMGREP_ENABLED=true
+YARA_ENABLED=true
+SEMGREP_MOCK=false
+
+# Share links
+SHARE_LINK_EXPIRE_HOURS=72
